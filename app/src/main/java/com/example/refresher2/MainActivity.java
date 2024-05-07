@@ -3,8 +3,10 @@ package com.example.refresher2;
 import android.Manifest.permission;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
@@ -13,14 +15,20 @@ import android.widget.TextView;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.refresher2.Model.Food;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
 
     FusedLocationProviderClient flpc;
     TextView txt_lat, txt_lon, txt_alt, txt_dir;
+
     private boolean hasPermission(Context context, String permissionStr) {
         return ContextCompat.checkSelfPermission(context, permissionStr) == PackageManager.PERMISSION_GRANTED;
     }
@@ -49,6 +58,10 @@ public class MainActivity extends AppCompatActivity {
 //        });
         Log.d("MainActivity", "onCreate: starting app");
         flpc = LocationServices.getFusedLocationProviderClient(getApplicationContext());
+        initGui();
+        permissionsList = new ArrayList<>();
+        permissionsList.addAll(Arrays.asList(permissionsStr));
+        askForPermissions(permissionsList);
         foodlist = new ArrayList<>();
         EditText input = findViewById(R.id.inputfood);
         Button btn = findViewById(R.id.btnfood);
@@ -56,27 +69,50 @@ public class MainActivity extends AppCompatActivity {
                 foodlist.add(new Food(input.getText().toString()))
         );
 
-        permissionsList = new ArrayList<>();
-        permissionsList.addAll(Arrays.asList(permissionsStr));
-        askForPermissions(permissionsList);
+
     }
 
-    private void initGui(){
+    private void initGui() {
         txt_lat = findViewById(R.id.txt_lat);
         txt_lon = findViewById(R.id.txt_lon);
         txt_alt = findViewById(R.id.txt_alt);
         txt_dir = findViewById(R.id.txt_dir);
     }
 
-    private void getUpdate(){
-        flpc.requestLocationUpdates()
+    private void getUpdate() {
+        LocationRequest locationRequest = new LocationRequest.Builder(
+                Priority.PRIORITY_HIGH_ACCURACY, 1000).build();
+        flpc = LocationServices.getFusedLocationProviderClient(getApplicationContext());
+        if (ActivityCompat.checkSelfPermission(this, permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        flpc.requestLocationUpdates(locationRequest, new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                Location location = locationResult.getLastLocation();
+                txt_lat.setText("Latitude: " + location.getLatitude());
+                txt_lon.setText("Longitude" + location.getLongitude());
+                txt_alt.setText("Altitude" + location.getAltitude());
+                txt_dir.setText("Direction" + location.getBearing());
+            }
+        }, Looper.myLooper());
+
     }
 
     ArrayList<String> permissionsList;
     String[] permissionsStr = {permission.CAMERA,
             permission.RECORD_AUDIO,
             permission.READ_EXTERNAL_STORAGE,
-            permission.ACCESS_FINE_LOCATION};
+            permission.ACCESS_FINE_LOCATION,
+            permission.ACCESS_COARSE_LOCATION,
+            permission.ACCESS_BACKGROUND_LOCATION};
     int permissionsCount = 0;
     ActivityResultLauncher<String[]> permissionsLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(),
@@ -99,7 +135,7 @@ public class MainActivity extends AppCompatActivity {
                                 //Show alert dialog
                                 showPermissionDialog();
                             } else {
-                                //All permissions granted. Do your stuff 🤞
+                                getUpdate();
                             }
                         }
                     });
