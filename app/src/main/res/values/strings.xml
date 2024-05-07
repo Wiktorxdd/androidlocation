@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">refresher2</string>
+    <string name="put_here_your_food_here">Put here your food here</string>
+    <string name="save_food">save food</string>
+</resources>
