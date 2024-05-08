@@ -1,8 +1,10 @@
 package com.example.refresher2;
 
 import static android.Manifest.*;
+import static android.app.PendingIntent.getActivity;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
@@ -42,15 +44,20 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+
 import com.example.refresher2.Model.Food;
+import com.google.gson.Gson;
 
 public class MainActivity extends AppCompatActivity {
 
     public static List<Loc> locList;
     Location location;
+    Context context = this;
 
     FusedLocationProviderClient flpc;
     TextView txt_lon, txt_lat, txt_alt, txt_dir;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
         Log.d("MainActivity", "onCreate: starting app");
 
         initGui();
+
         permissionsList = new ArrayList<>();
         permissionsList.addAll(Arrays.asList(permissionsStr));
         askForPermissions(permissionsList);
@@ -75,9 +83,22 @@ public class MainActivity extends AppCompatActivity {
         EditText input = findViewById(R.id.inputfood);
 
 
+
+
     }
 
-    public void registerLocation(){
+    public void registerLoc(List<Loc> locList){
+        SharedPreferences sharedPreferences = getSharedPreferences("shared preferences", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        Gson gson = new Gson();
+        String json = gson.toJson(locList);
+        editor.putString("locList", json);
+        editor.apply();
+
+        // Load Loc list from SharedPreferences
+        json = sharedPreferences.getString("locList", null);
+        Loc[] locs = gson.fromJson(json, Loc[].class);
+        List<Loc> loadedLocList = Arrays.asList(locs);
 
     }
 
@@ -91,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
 
         findViewById(R.id.btnfood).setOnClickListener(v -> {
             new Loc().registerToilet(location);
-
+            registerLoc(locList);
         });
     }
 
